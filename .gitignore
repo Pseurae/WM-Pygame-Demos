@@ -1,0 +1,9 @@
+# Compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# General
+.DS_Store
+.vscode
+
