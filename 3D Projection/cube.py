@@ -9,7 +9,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 """
 
 import pygame.draw
-from matrix import Matrix, PROJECTION_MATRIX
+from shape import Shape
 import math
 
 CUBE_VERTICES = (
@@ -26,20 +26,10 @@ CUBE_VERTICES = (
 CUBE_POINT_COLOR = (255, 255, 255)
 CUBE_LINE_COLOR = (220, 220, 220)
 
-class Cube(object):
+class Cube(Shape):
     def __init__(self, size):
+        super(Cube, self).__init__(CUBE_VERTICES, 0, 0, 0)
         self.size = size
-        self.rotate_x = 0.0
-        self.rotate_y = 0.0
-        self.rotate_z = 0.0
-
-    @property
-    def rotation_matrix(self):
-        return Matrix.rotate(
-            math.radians(self.rotate_x),
-            math.radians(self.rotate_y),
-            math.radians(self.rotate_z)
-        )
 
     def draw(self, window, xpos, ypos):
         points = [ ]
@@ -52,26 +42,15 @@ class Cube(object):
                 points[j]
             )
 
-        for (x, y, z) in CUBE_VERTICES:
-            x, y, z = self.rotation_matrix.transform3(x, y, z, 1)
-            x, y = PROJECTION_MATRIX.transform2(x, y, z, 1)
-
+        for (x, y, z) in self.iterate_points():
             x = xpos + x * self.size
             y = ypos + y * self.size
             points.append((x, y))
 
-        draw_lines(0, 1)
-        draw_lines(0, 3)
-        draw_lines(0, 4)
-        draw_lines(1, 2)
-        draw_lines(1, 5)
-        draw_lines(2, 6)
-        draw_lines(2, 3)
-        draw_lines(3, 7)
-        draw_lines(4, 5)
-        draw_lines(4, 7)
-        draw_lines(6, 5)
-        draw_lines(6, 7)
+        for i in range(4):
+            draw_lines(i, (i + 1) % 4)
+            draw_lines(i + 4, (i + 1) % 4 + 4)
+            draw_lines(i, i + 4)
 
         for (x, y) in points:
             pygame.draw.circle(window, CUBE_POINT_COLOR, (x, y), 2)

@@ -51,9 +51,7 @@ if __name__ == "__main__":
         sphere.draw(window, 200, 200)
         pygame.display.update()
 
-        sphere.rotate_x += 0.5
-        # cube.rotate_x += 0.5
-        # cube.rotate_y += 0.25
+        sphere.rot_z += 0.5
 
     pygame.quit()
 

@@ -8,42 +8,27 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import pygame.draw
+from matrix import Matrix, PROJECTION_MATRIX
 import math
-from shape import Shape
 
-def iterate_points(r, mw, mh):
-    rv = [ ] 
+class Shape(object):
+    def __init__(self, points, rot_x, rot_y, rot_z):
+        self.points = points
+        self.rot_x = rot_x
+        self.rot_y = rot_y
+        self.rot_z = rot_z
 
-    for i in range(mh + 1):
-        lt = (2.0 * math.pi / mh) * i
+    def rotation_matrix(self):
+        return Matrix.rotate(
+            math.radians(self.rot_x),
+            math.radians(self.rot_y),
+            math.radians(self.rot_z)
+        )
 
-        for j in range(mw + 1):
-            lg = (2.0 * math.pi / mw) * j
+    def iterate_points(self):
+        rot_matrix = self.rotation_matrix()
 
-            sinlt = math.sin(lt)
-            sinlg = math.sin(lg)
-
-            coslt = math.cos(lt)
-            coslg = math.cos(lg)
-
-            x = r * sinlt * coslg
-            y = r * sinlt * sinlg
-            z = r * coslt
-
-            rv.append((x, y, z))
-
-    return rv
-
-SPHERE_POINT_COLOR = (255, 255, 255)
-
-class Sphere(Shape):
-    def __init__(self, radius, map_width, map_height):
-        super(Sphere, self).__init__(iterate_points(radius, map_width, map_height), 0, 0, 0)
-        self.radius = radius
-
-    def draw(self, window, xpos, ypos):
-        for (x, y, z) in self.iterate_points():
-            x += xpos
-            y += ypos
-            pygame.draw.circle(window, SPHERE_POINT_COLOR, (x, y), 3)
+        for (x, y, z) in self.points:
+            x, y, z = rot_matrix.transform3(x, y, z, 1)
+            x, y, z = PROJECTION_MATRIX.transform3(x, y, z, 1)
+            yield (x, y, z)
