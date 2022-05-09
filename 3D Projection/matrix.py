@@ -1,18 +1,29 @@
-"""
-Copyright 2022 Adhith Chand Thiruvath (Pseurae)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
+# Copyright 2004-2022 Tom Rothamel <pytom@bishoujo.us>
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation files
+# (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software,
+# and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 # Strictly following RenPy's own implementation for Matrices
 # so that there's no need to change field names on porting.
 # Plus, RenPy's Matrices are in Cython.
 
-from math import sin, cos, pi, radians
+from math import sin, cos, tan, radians
 
 class Matrix(object):
     __slots__ = [
@@ -41,6 +52,7 @@ class Matrix(object):
              self.ydx, self.ydy, self.ydz,
              self.zdx, self.zdy, self.zdz) = v
             self.wdw = 1.0
+
         elif l == 16:
             (self.xdx, self.xdy, self.xdz, self.xdw,
              self.ydx, self.ydy, self.ydz, self.ydw,
@@ -113,10 +125,19 @@ class Matrix(object):
 
     @classmethod
     def offset(cls, x, y, z):
-        rv = cls.identity(None)
+        rv = cls.identity()
         rv.xdw = x
         rv.ydw = y
         rv.zdw = z
+        return rv
+
+    @classmethod
+    def scale(cls, x, y, z):
+        rv = cls(None)
+        rv.xdx = x
+        rv.ydy = y
+        rv.zdz = z
+        rv.wdw = 1
         return rv
 
     @classmethod
@@ -142,23 +163,44 @@ class Matrix(object):
         rv.zdy = sinx * cosy
         rv.zdz = cosx * cosy
 
-        rv.wdw = 1
+        rv.wdw = -1
 
         return rv
 
     @classmethod
-    def screen_projection(cls):
+    def perspective(cls, theta, near, far):
         rv = cls(None)
-        rv.xdx = 1
-        rv.ydy = 1
-        rv.zdz = 0
-        rv.wdw = 1
+
+        fov = 1.0 / tan(radians(theta / 2.0))
+        znorm = (far / (far - near))
+
+        rv.xdx = fov
+        rv.ydy = fov
+        rv.zdz = znorm
+        rv.wdz = -near * znorm
+        rv.zdw = -1
+
         return rv
+
+    @classmethod
+    def orthographic(cls):
+        rv = cls.identity()
+        rv.zdz = 0
+        rv.wdw = 0
+        return rv
+
+    def transform4(self, x, y, z, w):
+        newx = x * self.xdx + y * self.xdy + z * self.xdz + w * self.xdw
+        newy = x * self.ydx + y * self.ydy + z * self.ydz + w * self.ydw
+        newz = x * self.zdx + y * self.zdy + z * self.zdz + w * self.zdw
+        neww = x * self.wdx + y * self.wdy + z * self.wdz + w * self.wdw
+        return (newx, newy, newz, neww)
 
     def transform3(self, x, y, z, w):
         newx = x * self.xdx + y * self.xdy + z * self.xdz + w * self.xdw
         newy = x * self.ydx + y * self.ydy + z * self.ydz + w * self.ydw
         newz = x * self.zdx + y * self.zdy + z * self.zdz + w * self.zdw
+
         return (newx, newy, newz)
 
     def transform2(self, x, y, z, w):
@@ -167,5 +209,4 @@ class Matrix(object):
         return (newx, newy)
 
 IDENTITY_MATRIX = Matrix.identity()
-PROJECTION_MATRIX = Matrix.screen_projection()
-
+PERSPECTIVE_MATRIX = Matrix.perspective(90, 0.1, 100.0)
