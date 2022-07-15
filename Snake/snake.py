@@ -31,10 +31,10 @@ import pygame.time
 import pygame.display
 import math
 
-game_over_tail_bite = False
+game_over_tail_bite = True
 game_over_out_of_bounds = True
 
-FaOREGROUND = 0
+FOREGROUND = 0
 RANDOM = 1
 GRADIENT = 2
 
@@ -53,7 +53,7 @@ ycells = 20
 width = xcells * grid_size + (xcells - 1) * grid_line_width
 height = ycells * grid_size + (ycells - 1) * grid_line_width
 
-target_fps = 5
+target_fps = 15
 
 def generate_gradients():
     rv = [ ]
@@ -223,6 +223,10 @@ if __name__ == "__main__":
 
         current_position[0] += current_direction[0]
         current_position[1] += current_direction[1]
+
+        if not game_over_out_of_bounds:
+            current_position[0] %= xcells
+            current_position[1] %= ycells
 
         x, y = current_position[0], current_position[1]
         new_block = Block(x, y, 0, snake_color(x, y))
