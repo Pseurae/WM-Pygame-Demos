@@ -29,10 +29,10 @@ import pygame.display
 import pygame.image
 import random
 import time
-import math
+import sys
 
 background_colour = (255, 255, 255)
-(width, height) = (400, 400)
+(width, height) = (1920, 1080)
 drag = 0.999
 elasticity = 0.55
 gravity = (0.0, 0.2)
@@ -63,26 +63,28 @@ class Chibi(object):
         self.width = max(idle_image.get_width(), hover_image.get_width())
         self.height = max(idle_image.get_height(), hover_image.get_height())
 
-        self.jump_delay = self.random_jump_delay()
+        self.jump_delay = None
         self.flipped = False # True: Left, False: Right
         self.jump_move = 0
 
     def interact(self, st):
-        if self.hovered() or self.y > height - self.height:
+        if self.jump_delay is None :
             self.jump_delay = st + self.random_jump_delay()
 
         if self.jump_delay < st:
-            if self.jump_move > 0:
-                self.jump_move = random.randint(-1, 0)
-            elif self.jump_move < 0:
-                self.jump_move = random.randint(0, 1)
-            else:
-                self.jump_move = random.randint(-1, 1)
+            if not self.hovered() and self.grounded:
+                if self.jump_move > 0:
+                    self.jump_move = random.randint(-5, 0)
+                elif self.jump_move < 0:
+                    self.jump_move = random.randint(0, 5)
+                else:
+                    self.jump_move = random.randint(-1, 1)
 
-            self.flipped = True if self.jump_move > 0 else False
+                self.flipped = True if self.jump_move > 0 else False
+                self.jump_move = min(max(self.jump_move, -1), 1)
 
-            self.speed_x = 1.0 * self.jump_move
-            self.speed_y = -3.0
+                self.speed_x = 1.0 * self.jump_move
+                self.speed_y = -3.0
 
             self.jump_delay = st + self.random_jump_delay()
 
@@ -115,6 +117,10 @@ class Chibi(object):
             return self.hover_image
 
         return self.idle_image
+
+    @property
+    def grounded(self):
+        return self.y + self.height >= height
 
     def render_step(self, screen):
         screen.blit(self.image, (int(self.x), int(self.y)))
@@ -173,10 +179,15 @@ if __name__ == "__main__":
 
     is_running = True
     selected_chibi = False
+    hold_x = hold_y = 0
+    hold_timer = 0
 
     while is_running:
         dt = clock.tick(target_fps) * 0.001 * target_fps
         (mouse_x, mouse_y) = pygame.mouse.get_pos()
+
+        if start_time is None:
+            start_time = time.time()
 
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
@@ -184,16 +195,19 @@ if __name__ == "__main__":
 
             elif ev.type == pygame.MOUSEBUTTONDOWN:
                 selected_chibi = g_chibi.hovered()
+                if selected_chibi:
+                    (hold_x, hold_y) = (mouse_x - g_chibi.x, mouse_y - g_chibi.y)
+                    if g_chibi.grounded: g_chibi.speed_y = -3
 
             elif ev.type == pygame.MOUSEBUTTONUP:
                 selected_chibi = False
 
         if selected_chibi:
-            dx = mouse_x - g_chibi.x - (g_chibi.width / 2.0)
-            dy = mouse_y - g_chibi.y - (g_chibi.height / 2.0)
+            old_x, old_y = g_chibi.x, g_chibi.y
+            g_chibi.x, g_chibi.y = min(max(mouse_x - hold_x, 0), width - g_chibi.width), min(max(mouse_y - hold_y, 0), height - g_chibi.height)
 
-            g_chibi.speed_x = dx * 0.1
-            g_chibi.speed_y = dy * 0.1
+            if old_x != g_chibi.x or old_y != g_chibi.y:
+                g_chibi.speed_x, g_chibi.speed_y = (g_chibi.x - old_x) * 0.5, (g_chibi.y - old_y) * 0.5
 
         window.fill(background_colour)
 
@@ -211,15 +225,12 @@ if __name__ == "__main__":
 
         text_render(window, position_string, velocity_string, delta_t_string)
 
-        g_chibi.physics_step(gravity, drag, min(dt, 1.0))
-        g_chibi.bounce_step(elasticity)
-
-        if start_time is None:
-            start_time = time.time()
+        if not selected_chibi:
+            g_chibi.physics_step(gravity, drag, min(dt, 1.0))
+            g_chibi.bounce_step(elasticity)
+            g_chibi.interact(time.time() - start_time)
 
         g_chibi.render_step(window)
-        g_chibi.interact(time.time() - start_time)
-
         pygame.display.flip()
 
     pygame.quit()
